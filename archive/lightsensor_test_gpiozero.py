@@ -1,15 +1,12 @@
 from gpiozero import Button
 from gpiozero import LED
-from gpiozero import SmoothedInputDevice
+from gpiozero import LightSensor
 from time import sleep
-import threading
 from signal import pause
 import time
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-
-THRESHOLD = 0.25
 
 BUTTON = Button(17)
 LED = LED(4)
@@ -17,28 +14,24 @@ LED = LED(4)
 class Lane:
     def __init__(self, pin, colour):
         self.pin = pin
-        self.lane_sensor =  SmoothedInputDevice(pin, threshold=THRESHOLD)
+        self.lane_sensor =  LightSensor(pin, threshold=0.1, queue_len=100)
         self.colour = colour
-        self.lane_sensor._queue.start()
+        #self.lane_sensor._queue.start()
 
     def is_active(self):
         active = self.lane_sensor.is_active
         return active
     
     def start_race(self, start_time):
-        self.racing = True
         self.start_time = start_time
-        x = threading.Thread(target = self.end_race)
-        x.start()
+        self.racing = True
+        self.lane_sensor.when_dark = self.end_race
 
     def end_race(self):
-        logging.info("{} started the race".format(self.colour))
-        while self.is_active():
-            pass 
         self.racing = False
         self.seconds = time.time() - self.start_time
         self.time = round(self.seconds,2)
-        logging.info('{} finished the race'.format(self.colour, self.time))
+        logging.info('{} finished the race!'.format(self.colour, self.time))
 
     def is_racing(self):
         return self.racing
@@ -51,29 +44,24 @@ lanes = [
 ]
 
 def race():
-    separator()
-    logging.info("Preparing for Race")
-    separator()
+    logging.info("Checking lanes")
     # Check lanes are all operational
     for lane in lanes:
         if lane.is_active():
-            logging.info("{} is active".format(lane.colour))
+            logging.info(lane.colour + " is active")
         else:
-            logging.error ("{} NOT active".format(lane.colour))
-    separator()
+            logging.error (lane.colour + " NOT active")
 
-    # Report if a lane is broken
     for lane in lanes:
         if not lane.is_active():
-            logging.error("{} lane broken, aborting race".format(lane.colour))
+            logging.error(lane.colour + " lane broken, aborting race")
             LED.off()
             LED.blink(on_time=0.1, off_time=0.1, n=5)
-            separator()
-            return
+            return       
 
     # Start Race
     logging.info("Race Started!")
-    separator()
+    RACE_ACTIVE = True
     LED.on()
     start_time = time.time()
     for lane in lanes:
@@ -82,31 +70,26 @@ def race():
     # Open Solenoid
     # TODO
 
-    # Poll for the end of the race
+    # poll for times
     RACE_ACTIVE = True
     while RACE_ACTIVE:
         RACE_ACTIVE = False
         for lane in lanes:
             if lane.is_racing():
+                if lane.lane_sensor.value < 0.1:
+                    print(lane.colour + " " + str(lane.lane_sensor.value))
                 RACE_ACTIVE = True
-    end_race(lanes)
-    logging.info("Race Complete!")    
-    separator()
 
-def end_race(lanes):
-    winner = lanes[0]
+    logging.info("Race Complete!")
+
     for lane in lanes:
         logging.info ("{} took {}".format(lane.colour, lane.time))
-        if lane.seconds < winner.seconds:
-            winner = lane
-    separator()
-    logging.info("*** {} Won! ***".format(lane.colour))
-    separator()
+
+def end_race(lane,seconds):
+    logging.info(lane + " Won!")
+    logging.info(seconds/100.0)
     LED.off()
     return False
-
-def separator():
-    logging.info("--------------------------------------")
 
 BUTTON.when_pressed = race
 
