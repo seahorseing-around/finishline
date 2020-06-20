@@ -78,7 +78,7 @@ def heartbeat():
         logging.info("This Heat: Class = {}, Round = {}, Heat = {}".format(ACTIVE_HEAT["class"],ACTIVE_HEAT["round"],ACTIVE_HEAT["heat"]))
         return ACTIVE_HEAT
     else:
-        logging.info("No active heat")
+        logging.info("No active heat in heartbeat")
         return False
 
 
