@@ -1,6 +1,7 @@
 from gpiozero import Button
 from gpiozero import LED
 from gpiozero import SmoothedInputDevice
+import statistics
 from time import sleep
 import threading
 from signal import pause
@@ -9,7 +10,8 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-THRESHOLD = 0.25
+THRESHOLD = 0.15
+QUEUE = 5
 
 BUTTON = Button(17)
 LED = LED(4)
@@ -17,7 +19,7 @@ LED = LED(4)
 class Lane:
     def __init__(self, pin, colour):
         self.pin = pin
-        self.lane_sensor =  SmoothedInputDevice(pin, threshold=THRESHOLD)
+        self.lane_sensor =  SmoothedInputDevice(pin, threshold=THRESHOLD, queue_len=QUEUE)
         self.colour = colour
         self.lane_sensor._queue.start()
 
