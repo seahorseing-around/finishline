@@ -14,12 +14,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 THRESHOLD = 0.15
 QUEUE = 5
 
-PRIMER_BUTTON = Button(17)
-START_BUTTON = Button(16)
-SOLENOID = OutputDevice(18)
-RED_LED = LED(4)
-YELLOW_LED = LED(13)
-GREEN_LED = LED(26)
+RESTART_BUTTON = Button(26)
+PRIMER_BUTTON = Button(13)
+START_BUTTON = Button(6)
+SOLENOID = OutputDevice(16)
+WHITE_LED = LED(18)
+RED_LED = LED(25)
+YELLOW_LED = LED(23)
+GREEN_LED = LED(24)
+
+ACTIVE_LED = LED(4)
+
 
 URL = "https://ascoutin.london/derbynet"
 USERNAME = "Timer"
@@ -66,10 +71,10 @@ def open_solenoid():
 
 
 lanes = [
-    Lane(27, "Yellow",2),
-    Lane(24, "Blue",1),
-    Lane(23, "Green",3),
-    Lane(22, "White",4)
+    Lane(17, "Yellow",2),
+    Lane(5, "Blue",1),
+    Lane(22, "Green",3),
+    Lane(27, "White",4)
 ]
 
 def derby_post(cookie_jar="",action = "timer-message",data={},message=""):
@@ -180,7 +185,7 @@ def malfunction(cookie_jar,detectable, error_message):
 def race():
     separator()
     logging.info("Preparing for Race")
-    RED_LED.on()
+    WHITE_LED.on()
     separator()
     # Check lanes are all operational
     logging.info("Checking Track")
@@ -229,7 +234,7 @@ def race():
                 time.sleep(0.1)
             logging.info("Starting race")
             YELLOW_LED.off()
-            RED_LED.off()
+            WHITE_LED.off()
             GREEN_LED.on()
 
             start_time = time.time()
@@ -248,11 +253,13 @@ def race():
             results = end_race(lanes)  
             finished(cookie_jar = cookie_jar,results=results, active_heat=active_heat)
             logging.info("Class {}, Round {}, Heat {}. Race Complete!".format(active_heat["class"],active_heat["round"],active_heat["heat"]))
-            RED_LED.blink(on_time=0.25, off_time=0.75, n=3)
+            WHITE_LED.blink(on_time=0.25, off_time=1, n=3)
             time.sleep(0.25)
-            YELLOW_LED.blink(on_time=0.25, off_time=0.75, n=3)
+            RED_LED.blink(on_time=0.25, off_time=1, n=3)
             time.sleep(0.25)
-            GREEN_LED.blink(on_time=0.25, off_time=0.75, n=3)  
+            YELLOW_LED.blink(on_time=0.25, off_time=1, n=3)
+            time.sleep(0.25)
+            GREEN_LED.blink(on_time=0.25, off_time=1, n=3)  
             separator()
 
         else:
@@ -287,6 +294,7 @@ def abort_race(reason):
     RED_LED.off()
     YELLOW_LED.off()
     GREEN_LED.off()
+    WHITE_LED.off()
     if reason == "no_active_heat":
         RED_LED.blink(on_time=0.5, off_time=0.5, n=3)
     elif reason == "lane_broken":
@@ -296,6 +304,7 @@ def abort_race(reason):
     
     return
 
+ACTIVE_LED.on()
 PRIMER_BUTTON.when_pressed = race
 START_BUTTON.when_pressed = open_solenoid
 pause()
