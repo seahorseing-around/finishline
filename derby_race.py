@@ -76,7 +76,7 @@ def open_solenoid():
 lanes = [
     Lane(17, "Yellow",2),
     Lane(5, "Blue",1),
-#    Lane(22, "Green",3),
+    Lane(22, "Green",3),
     Lane(27, "White",4)
 ]
 
