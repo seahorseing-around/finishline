@@ -315,7 +315,7 @@ def handler(signal_received, frame):
     WHITE_LED.off()
     ACTIVE_LED.off()
 
-    logging.info('Terminstaion signal recieved, ending Derby Race')
+    logging.info('Terminataion signal recieved, ending Derby Race')
     exit(0)
 
 if __name__ == '__main__':
