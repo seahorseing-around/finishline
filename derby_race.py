@@ -8,15 +8,17 @@ import logging
 import requests
 import xml.etree.ElementTree as ET
 import operator
+from signal import signal, SIGTERM, SIGINT
+from sys import exit
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', filename='/var/log/derby_race.log')
 
 THRESHOLD = 0.15
 QUEUE = 5
 
-RESTART_BUTTON = Button(26)
-PRIMER_BUTTON = Button(13)
-START_BUTTON = Button(6)
+PRIMER_BUTTON = Button(6)
+START_BUTTON = Button(13)
+
 SOLENOID = OutputDevice(16)
 WHITE_LED = LED(18)
 RED_LED = LED(25)
@@ -56,6 +58,7 @@ class Lane:
         self.seconds = time.time() - self.start_time
         self.time = round(self.seconds,3)
         logging.info('Lane {}, {}, finished the race in {} seconds'.format(self.lane, self.colour, self.time))
+        YELLOW_LED.blink(on_time=0.1, off_time=1, n=1)
 
     def is_racing(self):
         return self.racing
@@ -73,7 +76,7 @@ def open_solenoid():
 lanes = [
     Lane(17, "Yellow",2),
     Lane(5, "Blue",1),
-    Lane(22, "Green",3),
+#    Lane(22, "Green",3),
     Lane(27, "White",4)
 ]
 
@@ -304,7 +307,27 @@ def abort_race(reason):
     
     return
 
-ACTIVE_LED.on()
-PRIMER_BUTTON.when_pressed = race
-START_BUTTON.when_pressed = open_solenoid
-pause()
+def handler(signal_received, frame):
+    # Handle any cleanup here
+    RED_LED.off()
+    YELLOW_LED.off()
+    GREEN_LED.off()
+    WHITE_LED.off()
+    ACTIVE_LED.off()
+
+    logging.info('Terminstaion signal recieved, ending Derby Race')
+    exit(0)
+
+if __name__ == '__main__':
+    # Tell Python to run the handler() function when SIGTERM is recieved
+    signal(SIGTERM, handler)
+    signal(SIGINT, handler)
+
+    separator()
+    logging.info("Derby Pi Starting up!")
+    separator()
+
+    ACTIVE_LED.on()
+    PRIMER_BUTTON.when_pressed = race
+    START_BUTTON.when_pressed = open_solenoid
+    pause()
