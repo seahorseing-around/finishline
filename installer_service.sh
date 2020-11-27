@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# install basics
+apt-get install vim -y
+pip install statistics
+
 #Add service file & relead systemctl
 echo "Copy in Service file"
 cp derby_race.service /lib/systemd/system/derby_race.service
