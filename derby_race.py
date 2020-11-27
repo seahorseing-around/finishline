@@ -33,12 +33,13 @@ USERNAME = "Timer"
 PASSWORD = "doyourbest"
 
 class Lane:
-    def __init__(self, pin, colour, lane):
+    def __init__(self, pin, colour, lane, error_led):
         self.pin = pin
         self.lane_sensor =  SmoothedInputDevice(pin, threshold=THRESHOLD, queue_len=QUEUE)
         self.colour = colour
         self.lane_sensor._queue.start()
         self.lane = lane
+        self.error_led = error_led
 
     def is_active(self):
         active = self.lane_sensor.is_active
@@ -65,6 +66,9 @@ class Lane:
 
     def set_position(self,position):
         self.position = position
+    
+    def error_blink(self):
+        self.error_led.blink(on_time=0.5, off_time=0.5, n=50)
 
 def open_solenoid():
     logging.info("Opening Solenoid")
@@ -74,10 +78,10 @@ def open_solenoid():
 
 
 lanes = [
-    Lane(17, "Yellow",2),
-    Lane(5, "Blue",1),
-    Lane(22, "Green",3),
-    Lane(27, "White",4)
+    Lane(17, "Yellow",2, YELLOW_LED),
+    Lane(5, "Blue",1, RED_LED),
+    Lane(22, "Green",3, GREEN_LED),
+    Lane(27, "White",4, WHITE_LED)
 ]
 
 def derby_post(cookie_jar="",action = "timer-message",data={},message=""):
@@ -188,7 +192,6 @@ def malfunction(cookie_jar,detectable, error_message):
 def race():
     separator()
     logging.info("Preparing for Race")
-    WHITE_LED.on()
     separator()
     # Check lanes are all operational
     logging.info("Checking Track")
@@ -197,6 +200,7 @@ def race():
             logging.debug("{} is active".format(lane.colour))
         else:
             logging.error ("{} NOT active".format(lane.colour))
+            lane.error_blink()
 
     # Report if a lane is broken
     for lane in lanes:
@@ -206,8 +210,12 @@ def race():
             return
     logging.info("Track ready to race")
 
+    #indicate prep has begun
+    WHITE_LED.on()
+
     #Setup Derbynet
     logging.info("Initiating DerbyNet")
+    
     #login
     cookie_jar = login()
     if len(cookie_jar) < 1:
@@ -294,6 +302,7 @@ def separator():
     logging.info("--------------------------------------")
 
 def abort_race(reason):
+    sleep(8)
     RED_LED.off()
     YELLOW_LED.off()
     GREEN_LED.off()
