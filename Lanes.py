@@ -1,0 +1,44 @@
+import threading
+from gpiozero import SmoothedInputDevice
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', filename='/var/log/derby_race.log')
+
+class Lane:
+    def __init__(self, pin, colour, lane, error_led, race_finish_led, threshold, queue):
+        self.pin = pin
+        self.lane_sensor =  SmoothedInputDevice(pin, threshold=threshold, queue_len=queue)
+        self.colour = colour
+        self.lane_sensor._queue.start()
+        self.lane = lane
+        self.error_led = error_led
+
+    def is_active(self):
+        active = self.lane_sensor.is_active
+        return active
+    
+    def start_race(self, start_time):
+        self.racing = True
+        self.start_time = start_time
+        x = threading.Thread(target = self.end_race)
+        x.start()
+
+    def end_race(self):
+        logging.debug("{} started the race".format(self.colour))
+        while self.is_active():
+            pass 
+        self.racing = False
+        self.seconds = time.time() - self.start_time
+        self.time = round(self.seconds,3)
+        logging.info('Lane {}, {}, finished the race in {} seconds'.format(self.lane, self.colour, self.time))
+        self.race_finish_led.blink(on_time=0.1, off_time=1, n=1)
+
+    def is_racing(self):
+        return self.racing
+
+    def set_position(self,position):
+        self.position = position
+    
+    def error_blink(self):
+        self.error_led.blink(on_time=0.5, off_time=0.5, n=50)
