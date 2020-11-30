@@ -16,36 +16,38 @@ from derby_net_integration import *
 config_loc='/home/pi/finishline/config.properties'
 config = configparser.RawConfigParser()
 config.read(config_loc)
-log_file = config.get('RaceConfig', 'log_file')
+log_file = config.get('SystemConfig', 'log_file')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', filename=log_file)
 
 # Race Tuning
-THRESHOLD = 0.15
-QUEUE = int(config.get('RaceConfig','queue'))
+THRESHOLD = config.getfloat('RaceConfig','threshold')
+QUEUE = config.getint('RaceConfig','queue')
 
 # Buttons & Solenoid Config
-PRIMER_BUTTON = Button(int(config.get('RaceConfig','primer_button')))
-START_BUTTON = Button(int(config.get('RaceConfig','start_button')))
-SOLENOID = OutputDevice(int(config.get('RaceConfig','solenoid')))
+PRIMER_BUTTON = Button(config.getint('RaceConfig','primer_button'))
+START_BUTTON = Button(config.getint('RaceConfig','start_button'))
+SOLENOID = OutputDevice(config.getint('RaceConfig','solenoid'))
 
 # LED's 
-WHITE_LED = LED(int(config.get('RaceConfig','white_led')))
-RED_LED = LED(int(config.get('RaceConfig','red_led')))
-YELLOW_LED = LED(int(config.get('RaceConfig','yellow_led')))
-GREEN_LED = LED(int(config.get('RaceConfig','green_led')))
-ACTIVE_LED = LED(int(config.get('RaceConfig','active_led')))
+WHITE_LED = LED(config.getint('RaceConfig','white_led'))
+RED_LED = LED(config.getint('RaceConfig','red_led'))
+YELLOW_LED = LED(config.getint('RaceConfig','yellow_led'))
+GREEN_LED = LED(config.getint('RaceConfig','green_led'))
+ACTIVE_LED = LED(config.getint('RaceConfig','active_led'))
 
 # Lanes
-YELLOW_LANE = int(config.get('RaceConfig','yellow_lane'))
-BLUE_LANE = int(config.get('RaceConfig','blue_lane'))
-GREEN_LANE = int(config.get('RaceConfig','green_lane'))
-WHITE_LANE = int(config.get('RaceConfig','white_lane'))
+YELLOW_LANE = config.getint('RaceConfig','yellow_lane')
+BLUE_LANE = config.getint('RaceConfig','blue_lane')
+GREEN_LANE = config.getint('RaceConfig','green_lane')
+WHITE_LANE = config.getint('RaceConfig','white_lane')
 
 # DerbyNet Config
-USE_DERBYNET = bool(config.get('DerbyNetConfig','use_derbynet'))
+USE_DERBYNET = config.getboolean('DerbyNetConfig','use_derbynet')
 
 # Timings
-SOLENOID_OPEN_TIME = int(config.get('RaceConfig','solenoid_open'))
+SOLENOID_OPEN_TIME = config.getint('RaceConfig','solenoid_open')
+RACE_TIMEOUT = config.getint('RaceConfig','race_timeout')
+SEP = "---------------"
 
 def open_solenoid():
     logging.info("Opening Solenoid")
@@ -61,22 +63,21 @@ lanes = [
     Lane(YELLOW_LANE, "Yellow",2, YELLOW_LED, YELLOW_LED, THRESHOLD, QUEUE),
     Lane(BLUE_LANE, "Blue",1, RED_LED, YELLOW_LED, THRESHOLD, QUEUE),
     #Lane(GREEN_LANE, "Green",3, GREEN_LED, YELLOW_LED, THRESHOLD, QUEUE),
-    Lane(YELLOW_LANE, "White",4, WHITE_LED, YELLOW_LED, THRESHOLD, QUEUE)
+    Lane(WHITE_LANE, "White",4, WHITE_LED, YELLOW_LED, THRESHOLD, QUEUE)
 ]
 
 # # # # # # # # # # # # # #
-# Initiate Lanes
+# Race Functions
 # # # # # # # # # # # # # #
 
 def race():
-    separator()
-    logging.info("Preparing for Race")
-    separator()
+    logging.info("{} Preparing for Race {}".format(SEP,SEP))
+    
     # Check lanes are all operational
     logging.info("Checking Track")
     for lane in lanes:
         if lane.is_active():
-            logging.debug("{} is active".format(lane.colour))
+            logging.info("{} is active".format(lane.colour))
         else:
             logging.error ("{} NOT active".format(lane.colour))
             lane.error_blink()
@@ -96,6 +97,7 @@ def race():
     logging.info("Initiating DerbyNet")
     
     try:
+        # Start Race
         if USE_DERBYNET:
             #login
             cookie_jar = login()
@@ -111,58 +113,61 @@ def race():
 
             #get heat information
             active_heat = heartbeat(cookie_jar)
+            if not active_heat:
+                logging.error("Race failed: No active heat")
+                abort_race("no_active_heat")
+                return
 
-        # Start Race
-        if active_heat:
-            if started(cookie_jar):
-                separator()
-                logging.info("Ready to race!")
-                separator()
-                YELLOW_LED.on()
-                # WAIT for start button press 
-                # For some reason button.wait_for_press didn't work
-                while (not START_BUTTON.is_pressed):
-                    time.sleep(0.1)
-                logging.info("Starting race")
-                YELLOW_LED.off()
-                WHITE_LED.off()
-                GREEN_LED.on()
-
-                start_time = time.time()
-                for lane in lanes:
-                    lane.start_race(start_time)
-                # Open Solenoid
-                x = threading.Thread(target = open_solenoid())
-                x.start()
-                # Poll for the end of the race
-                RACE_ACTIVE = True
-                while RACE_ACTIVE:
-                    RACE_ACTIVE = False
-                    for lane in lanes:
-                        if lane.is_racing():
-                            RACE_ACTIVE = True
-                results = end_race(lanes)  
-                if USE_DERBYNET:
-                    finished(cookie_jar = cookie_jar,results=results, active_heat=active_heat)
-    
-                logging.info("Class {}, Round {}, Heat {}. Race Complete!".format(active_heat["class"],active_heat["round"],active_heat["heat"]))
-                WHITE_LED.blink(on_time=0.25, off_time=1, n=3)
-                time.sleep(0.25)
-                RED_LED.blink(on_time=0.25, off_time=1, n=3)
-                time.sleep(0.25)
-                YELLOW_LED.blink(on_time=0.25, off_time=1, n=3)
-                time.sleep(0.25)
-                GREEN_LED.blink(on_time=0.25, off_time=1, n=3)  
-                separator()
-
-            else:
+            if not started(cookie_jar):
                 logging.error("Race Failed, couldn't start race")
                 abort_race("couldn't reach DerbyNET")
                 return
-        else:
-            logging.error("Race failed: No active heat")
-            abort_race("no_active_heat")
-            return
+        
+        logging.info("{} Ready to race! {}".format(SEP,SEP))
+        
+        YELLOW_LED.on()
+        # WAIT for start button press 
+        # For some reason button.wait_for_press didn't work
+        while (not START_BUTTON.is_pressed):
+            time.sleep(0.1)
+        logging.info("Starting race")
+        YELLOW_LED.off()
+        WHITE_LED.off()
+        GREEN_LED.on()
+
+        start_time = time.time()
+        for lane in lanes:
+            lane.start_race(start_time)
+        # Open Solenoid
+        x = threading.Thread(target = open_solenoid())
+        x.start()
+        # Poll for the end of the race
+        RACE_ACTIVE = True
+        while RACE_ACTIVE:
+            RACE_ACTIVE = False
+            for lane in lanes:
+                if lane.is_racing():
+                    RACE_ACTIVE = True
+            
+            if time.time() - start_time > RACE_TIMEOUT:
+                RACE_ACTIVE = False
+                for lane in lanes:
+                    if lane.is_racing():
+                        lane.timeout()
+
+
+        results = end_race(lanes)  
+        if USE_DERBYNET:
+            finished(cookie_jar = cookie_jar,results=results, active_heat=active_heat)
+
+        logging.info("Class {}, Round {}, Heat {}. Race Complete!".format(active_heat["class"],active_heat["round"],active_heat["heat"]))
+        WHITE_LED.blink(on_time=0.25, off_time=1, n=3)
+        time.sleep(0.25)
+        RED_LED.blink(on_time=0.25, off_time=1, n=3)
+        time.sleep(0.25)
+        YELLOW_LED.blink(on_time=0.25, off_time=1, n=3)
+        time.sleep(0.25)
+        GREEN_LED.blink(on_time=0.25, off_time=1, n=3)  
     
     except ConnectTimeout as et:
         abort_race("Couldn't contact DerbyNet")
@@ -181,13 +186,14 @@ def end_race(lanes):
         i+=1
         results["lane{}".format(lane.lane)]=lane.time
         results["place{}".format(lane.lane)]=lane.position
-    separator()
-    logging.info("*** Lane {}, {}, Won! ***".format(sort_lanes_by_time[0].lane,sort_lanes_by_time[0].colour))
-    separator()
+    
+    logging.info("{} *** Lane {}, {}, Won! *** {}".format(SEP,sort_lanes_by_time[0].lane,sort_lanes_by_time[0].colour,SEP))
     GREEN_LED.off()
     return results
 
 def abort_race(reason):
+    logging.error("{} !!! Race Aborting !!! {}".format(SEP,SEP))
+    logging.error("Reason for Abort: {}".format(reason))
     sleep(3)
     RED_LED.off()
     YELLOW_LED.off()
@@ -213,19 +219,16 @@ def handler(signal_received, frame):
     logging.info('Terminataion signal recieved, ending Derby Race')
     exit(0)
 
-def separator():
-    logging.info("--------------------------------------")
-
 if __name__ == '__main__':
     # Tell Python to run the handler() function when SIGTERM is recieved
     signal(SIGTERM, handler)
     signal(SIGINT, handler)
 
-    separator()
-    logging.info("Derby Pi Starting up!")
-    separator()
-
+    logging.info("{} Derby Pi Starting up! {}".format(SEP,SEP))
+    
     ACTIVE_LED.on()
     PRIMER_BUTTON.when_pressed = race
     START_BUTTON.when_pressed = open_solenoid
+    logging.info("Derby Pi Started OK")
+    logging.info("Waiting for race to start")
     pause()

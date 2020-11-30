@@ -6,11 +6,13 @@ import configparser
 config_loc='/home/pi/finishline/config.properties'
 config = configparser.RawConfigParser()
 config.read(config_loc)
-log_file = config.get('RaceConfig', 'log_file')
+log_file = config.get('SystemConfig', 'log_file')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', filename=log_file)
 
 
-URL = config.get('DerbyNetConfg','url')
+URL = config.get('DerbyNetConfig','url')
+USERNAME = config.get('DerbyNetConfig','username')
+PASSWORD = config.get('DerbyNetConfig','password')
 
 # # # # # # # # # # # # # #
 # DerbyNet Integration
@@ -34,21 +36,6 @@ def derby_post(cookie_jar="",action = "timer-message",data={},message=""):
     
     return x
 
-def check_success(message,x):
-    if ("<success/>" in x.text):
-        logging.debug("{} Successful".format(message))
-        return True
-    elif ("</failure>" in x.text) :
-        root = ET.fromstring(x.text)
-        logging.error("{} Failed. Message = {}, code = {}".format(message,root.find("failure").text,root.find("failure").get("code")))
-        return False
-
-def check_abort(x):
-    if("<abort/>" in x.text):
-        logging.error("Heat aborted")
-        return True
-    else:
-        return False
 
 def login():
     data = {"name":USERNAME,"password":PASSWORD}
@@ -98,9 +85,7 @@ def identified(cookie_jar, lane_count):
 def started(cookie_jar):
     x = derby_post(cookie_jar = cookie_jar, message = "STARTED")
     
-    if not USE_DERBYNET:
-        return True
-    elif (not check_success("STARTED",x)) or check_abort(x):
+    if (not check_success("STARTED",x)) or check_abort(x):
         return False
     else:
         return True
@@ -124,3 +109,23 @@ def malfunction(cookie_jar,detectable, error_message):
     
     if not check_success("MALFUNCTION",x):
         return
+
+# # # # # # # # # # # # # #
+# Read DerbyNet Responses 
+# # # # # # # # # # # # # #
+
+def check_success(message,x):
+    if ("<success/>" in x.text):
+        logging.debug("{} Successful".format(message))
+        return True
+    elif ("</failure>" in x.text) :
+        root = ET.fromstring(x.text)
+        logging.error("{} Failed. Message = {}, code = {}".format(message,root.find("failure").text,root.find("failure").get("code")))
+        return False
+
+def check_abort(x):
+    if("<abort/>" in x.text):
+        logging.error("Heat aborted")
+        return True
+    else:
+        return False
