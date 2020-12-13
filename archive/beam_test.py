@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 
-BEAM_PIN = 4
+BEAM_PIN = 27
 
 def break_beam_callback(channel):
     if GPIO.input(BEAM_PIN):
