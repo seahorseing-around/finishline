@@ -61,9 +61,9 @@ def open_solenoid():
 
 lanes = [
     Lane(YELLOW_LANE, "Yellow",2, YELLOW_LED, YELLOW_LED, THRESHOLD, QUEUE),
-    Lane(BLUE_LANE, "Blue",1, RED_LED, YELLOW_LED, THRESHOLD, QUEUE),
-    Lane(GREEN_LANE, "Green",3, GREEN_LED, YELLOW_LED, THRESHOLD, QUEUE),
-    Lane(WHITE_LANE, "White",4, WHITE_LED, YELLOW_LED, THRESHOLD, QUEUE)
+    Lane(BLUE_LANE, "Blue",1, YELLOW_LED, YELLOW_LED, THRESHOLD, QUEUE),
+    Lane(GREEN_LANE, "Green",3, YELLOW_LED, YELLOW_LED, THRESHOLD, QUEUE),
+    Lane(WHITE_LANE, "White",4, YELLOW_LED, YELLOW_LED, THRESHOLD, QUEUE)
 ]
 
 # # # # # # # # # # # # # #
@@ -155,12 +155,11 @@ def race():
                     if lane.is_racing():
                         lane.timeout()
 
-
         results = end_race(lanes)  
         if USE_DERBYNET:
             finished(cookie_jar = cookie_jar,results=results, active_heat=active_heat)
-
-        logging.info("Class {}, Round {}, Heat {}. Race Complete!".format(active_heat["class"],active_heat["round"],active_heat["heat"]))
+            logging.info("Class {}, Round {}, Heat {}. Race Complete!".format(active_heat["class"],active_heat["round"],active_heat["heat"]))
+            
         WHITE_LED.blink(on_time=0.25, off_time=1, n=3)
         time.sleep(0.25)
         RED_LED.blink(on_time=0.25, off_time=1, n=3)
