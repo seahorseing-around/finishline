@@ -13,7 +13,7 @@ config = configparser.RawConfigParser()
 config.read(config_loc)
 
 def restart_derby_race():
-    logging.info("MANUAL RESTART")
+    logging.info("----------MANUAL RESTART------------")
     logging.info("Ending derby_race Service")
     os.system('sudo service derby_race stop')
     logging.info("Starting derby_race Service")
@@ -23,13 +23,13 @@ def shutdown():
     check_call(['sudo', 'poweroff'])
 
 def toggle_derbynet():
-    # UNTESTED
-    # couldn't reliably trigger "when_held" - "when_pressed" took over
+    #TODO  couldn't reliably trigger "when_held" - "when_pressed" took over
+    logging.info("----------TOGGLE DERBYNET------------")
     logging.info("Toggling derbynet mode on/off")
     current_mode = config.getboolean('DerbyNetConfig','use_derbynet')
     logging.info("Current: USE_DERBYNET = {}".format(current_mode)) 
     config.set('DerbyNetConfig','use_derbynet', 'False' if current_mode else 'True')
-    logging.info("New value USE_DERBYNET set")
+    logging.info("New value USE_DERBYNET = {} set".format('False' if current_mode else 'True'))
     
     with open(config_loc, 'w') as configfile:
         config.write(configfile)
@@ -38,5 +38,5 @@ def toggle_derbynet():
     
 restart_btn = Button(26, hold_time=3)
 restart_btn.when_held = toggle_derbynet
-# restart_btn.when_pressed = restart_derby_race
+restart_btn.when_released = restart_derby_race # use when released, not when pressed - so the hold is picked up
 pause()
