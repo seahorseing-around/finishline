@@ -27,9 +27,9 @@ def derby_post(cookie_jar="",action = "timer-message",data={},message=""):
         data["message"] = message
 
     if(len(cookie_jar)>0):
-        x = requests.post("{}{}".format(URL,"/action.php"), headers = headers, data = data,cookies = cookie_jar, timeout = 2)
+        x = requests.post("{}{}".format(URL,"/action.php"), headers = headers, data = data,cookies = cookie_jar, timeout = 2, verify=False)
     else:
-        x = requests.post("{}{}".format(URL,"/action.php"), headers = headers, data = data, timeout = 2)
+        x = requests.post("{}{}".format(URL,"/action.php"), headers = headers, data = data, timeout = 2,  verify=False)
     logging.debug(x.status_code)
     logging.debug(x.text)
     x.close()

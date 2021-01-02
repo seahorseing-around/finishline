@@ -43,10 +43,9 @@ class Lane:
         self.race_finish_led.blink(on_time=0.1, off_time=1, n=1)
 
     def timeout(self):
-        logging.info("{} took too long, reached max timeout".format(self.colour))
+        logging.info("Lane {}, {} took too long, reached max timeout ({}s) did not finish (DNF)".format(self.lane,self.colour,RACE_TIMEOUT))
         self.racing = False
         self.time = RACE_TIMEOUT
-        logging.info('Lane {}, {}, did not finish (DNF)'.format(self.lane, self.colour))
         self.race_finish_led.blink(on_time=0.1, off_time=1, n=1)
 
     def is_racing(self):

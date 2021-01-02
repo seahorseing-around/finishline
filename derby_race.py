@@ -93,12 +93,12 @@ def race():
     #indicate prep has begun
     WHITE_LED.on()
 
-    #Setup Derbynet
-    logging.info("Initiating DerbyNet")
     
     try:
         # Start Race
         if USE_DERBYNET:
+            #Setup Derbynet
+            logging.info("Initiating DerbyNet")
             #login
             cookie_jar = login()
             if len(cookie_jar) < 1:
@@ -225,10 +225,12 @@ if __name__ == '__main__':
     signal(SIGINT, handler)
 
     logging.info("{} Derby Pi Starting up! {}".format(SEP,SEP))
-    
-    ACTIVE_LED.on()
+    if USE_DERBYNET:
+        ACTIVE_LED.on()
+    else:
+        ACTIVE_LED.blink(on_time=2.5, off_time=0.5, n=None, background=True)
     PRIMER_BUTTON.when_pressed = race
     START_BUTTON.when_pressed = open_solenoid
     logging.info("Derby Pi Started OK")
-    logging.info("Waiting for race to start")
+    logging.info("Ready & Waiting for race to start")
     pause()
